@@ -4,7 +4,7 @@ using namespace std::literals;
 
 namespace transport_catalogue {
     namespace output {
-        void ProcessOutputRequest(TransportCatalogue& transport_catalogue, std::istream& input) {
+        void ProcessOutputRequest(TransportCatalogue& transport_catalogue, std::istream& input, std::ostream& output) {
             std::string line;
             getline(input, line);
             int queries_count = std::stoi(line);
@@ -20,30 +20,30 @@ namespace transport_catalogue {
                 if (request_type == "Bus"s) {
                     bus_info = transport_catalogue.GetBusInfo(title);
                     if (bus_info.stops_on_route != 0) {
-                        std::cout << "Bus "s << title << ": "s 
+                        output << "Bus "s << title << ": "s 
                                   << bus_info.stops_on_route << " stops on route, "s
                                   << bus_info.unique_stops << " unique stops, "s
                                   << std::setprecision(6) << bus_info.route_length << " route length, "s
                                   << bus_info.curvature << " curvature"s
                                   << std::endl;
                     } else {
-                        std::cout << "Bus "s << title << ": not found"s << std::endl;
+                        output << "Bus "s << title << ": not found"s << std::endl;
                     }
                 }
                 if (request_type == "Stop"s) {
                     stop_info = transport_catalogue.GetStopInfo(title);
                     if (stop_info.search_status) {
                         if (stop_info.buses.size() == 0) {
-                            std::cout << "Stop "s << title << ": no buses"s << std::endl;
+                            output << "Stop "s << title << ": no buses"s << std::endl;
                         } else {
-                            std::cout << "Stop "s << title << ": buses"s;
+                            output << "Stop "s << title << ": buses"s;
                             for (const auto& bus_title : stop_info.buses) {
-                               std::cout << ' ' << bus_title;
+                               output << ' ' << bus_title;
                             }
-                            std::cout << std::endl;
+                            output << std::endl;
                         }
                     } else {
-                        std::cout << "Stop "s << title << ": not found"s << std::endl;
+                        output << "Stop "s << title << ": not found"s << std::endl;
                     }
                 }
                 queries_count--;

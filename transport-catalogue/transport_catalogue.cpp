@@ -50,6 +50,8 @@ namespace transport_catalogue {
 
     double TransportCatalogue::GetRouteCircleLength(const Bus* bus) {
         double route_length = 0.0;
+        if (!bus->stops.size())
+            return route_length;
         for (auto from = bus->stops.begin(); ; ++from) {
             auto to = std::next(from);
             if (to == bus->stops.end())
@@ -71,6 +73,8 @@ namespace transport_catalogue {
 
     double TransportCatalogue::GetRouteDirectLength(const Bus* bus) {
         double route_length = 0.0;
+        if (!bus->stops.size())
+            return route_length;
         for (auto from = bus->stops.begin(); ; ++from) {
             auto to = std::next(from);
             if (to == bus->stops.end())
@@ -100,6 +104,8 @@ namespace transport_catalogue {
 
     double TransportCatalogue::GetRouteGeoLength(const Bus* bus) {
         double route_geo_length = 0.0;
+        if (!bus->stops.size())
+            return route_geo_length;
 
         for (auto from = bus->stops.begin(); ; ++from) {
             auto to = std::next(from);

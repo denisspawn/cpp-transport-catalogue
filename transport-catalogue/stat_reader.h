@@ -7,6 +7,6 @@
 
 namespace transport_catalogue {
     namespace output {
-        void ProcessOutputRequest(TransportCatalogue& transport_catalogue, std::istream& input);
+        void ProcessOutputRequest(TransportCatalogue& transport_catalogue, std::istream& input, std::ostream& ouput);
     } // namespace output
 } // namespace transport_catalogue

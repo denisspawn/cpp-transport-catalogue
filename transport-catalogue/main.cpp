@@ -7,7 +7,7 @@ using namespace std;
 int main() {
     transport_catalogue::TransportCatalogue transport_catalogue;
     transport_catalogue::input::ProcessInputRequest(transport_catalogue, std::cin);
-    transport_catalogue::output::ProcessOutputRequest(transport_catalogue, std::cin);
+    transport_catalogue::output::ProcessOutputRequest(transport_catalogue, std::cin, std::cout);
     
     return 0;
 }
