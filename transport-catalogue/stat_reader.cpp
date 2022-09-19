@@ -1,9 +1,10 @@
 #include "stat_reader.h"
 
-using namespace std::literals;
 
 namespace transport_catalogue {
     namespace output {
+        using namespace std::literals;
+
         void ProcessOutputRequest(TransportCatalogue& transport_catalogue, std::istream& input, std::ostream& output) {
             std::string line;
             getline(input, line);
