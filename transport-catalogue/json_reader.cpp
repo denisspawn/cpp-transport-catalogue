@@ -161,12 +161,12 @@ void JSONReader::ProcessRenderSettingRequest(const json::Dict& setting_requests)
     r_set_.line_width = setting_requests.at("line_width"s).AsDouble();
     
     r_set_.bus_label_font_size = setting_requests.at("bus_label_font_size"s).AsInt();
-    for (const auto num : setting_requests.at("bus_label_offset"s).AsArray()) {
+    for (const auto& num : setting_requests.at("bus_label_offset"s).AsArray()) {
         r_set_.bus_label_offset.push_back(num.AsDouble());
     }
     
     r_set_.stop_label_font_size = setting_requests.at("stop_label_font_size"s).AsInt();
-    for (const auto num : setting_requests.at("stop_label_offset"s).AsArray()) {
+    for (const auto& num : setting_requests.at("stop_label_offset"s).AsArray()) {
         r_set_.stop_label_offset.push_back(num.AsDouble());
     }
     
@@ -174,7 +174,7 @@ void JSONReader::ProcessRenderSettingRequest(const json::Dict& setting_requests)
     
     r_set_.underlayer_width = setting_requests.at("underlayer_width"s).AsDouble();
     
-    for (const auto color : setting_requests.at("color_palette"s).AsArray()) {
+    for (const auto& color : setting_requests.at("color_palette"s).AsArray()) {
         r_set_.color_palette.push_back(CooseColorFormat(color));
     }
 }
