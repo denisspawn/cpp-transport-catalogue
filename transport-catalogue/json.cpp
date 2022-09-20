@@ -230,11 +230,11 @@ Node LoadNode(istream& input) {
 //Node::Node() : value_(nullptr) {}
 Node::Node(int val) : value_(move(val)) {}
 Node::Node(double val) : value_(move(val)) {}
-Node::Node(const string val) : value_(move(val)) {}
+Node::Node(const string& val) : value_(move(val)) {}
 Node::Node(nullptr_t val): value_(move(val)) {}
 Node::Node(bool val): value_(move(val)) {}
-Node::Node(const Dict val): value_(move(val)) {}
-Node::Node(const Array val): value_(move(val)) {}
+Node::Node(const Dict& val): value_(move(val)) {}
+Node::Node(const Array& val): value_(move(val)) {}
 
 bool Node::IsInt() const {
     return holds_alternative<int>(value_);

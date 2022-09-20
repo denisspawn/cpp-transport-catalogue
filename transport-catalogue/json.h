@@ -42,13 +42,13 @@ public:
     using Value = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
     
     Node() = default;
-    Node (const Dict val);
-    Node (const Array val);
+    Node (const Dict& val);
+    Node (const Array& val);
     Node(std::nullptr_t val);
     Node(bool val);
     Node(int val);
     Node(double val);
-    Node(const std::string val);
+    Node(const std::string& val);
     
     bool IsInt() const;
     bool IsDouble() const; // возвращает true, если в Node хранится int либо double.
