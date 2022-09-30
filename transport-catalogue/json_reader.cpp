@@ -17,7 +17,7 @@ StopDistances JSONReader::MakeStopDistance(const json::Dict& stop_query) {
     domain::StopDistances stop_distances;
     stop_distances.title = stop_query.at("name"s).AsString();
     if (stop_query.count("road_distances"s)) {
-        for (const auto& [name, distance] : stop_query.at("road_distances"s).AsMap()) {
+        for (const auto& [name, distance] : stop_query.at("road_distances"s).AsDict()) {
             stop_distances.stop_to_distance.insert({name, {distance.AsInt()}});
         }
     }
@@ -41,20 +41,20 @@ Bus JSONReader::MakeBus(const json::Dict& bus_query) {
 void JSONReader::ProcessBaseRequest(const json::Array& base_requests) {
     // first of all, we should process Stop requests.
     for (const auto& request : base_requests) {
-        const json::Dict& map_base_requests = request.AsMap();
+        const json::Dict& map_base_requests = request.AsDict();
         if (map_base_requests.at("type"s) == "Stop"s) {
             tr_cat_.AddStop(MakeStop(map_base_requests));
         }
     }
     // than we can process rest of queries (distances should be processed after processing of stops)
     for (const auto& request : base_requests) {
-        const json::Dict& map_base_requests = request.AsMap();
+        const json::Dict& map_base_requests = request.AsDict();
         if (map_base_requests.count("road_distances"s)) {
             tr_cat_.AddStopDistances(MakeStopDistance(map_base_requests));
         }
     }
     for (const auto& request : base_requests) {
-        const json::Dict& map_base_requests = request.AsMap();
+        const json::Dict& map_base_requests = request.AsDict();
         if (map_base_requests.at("type"s) == "Bus"s) {
             tr_cat_.AddBus(MakeBus(map_base_requests));
         }
@@ -65,7 +65,7 @@ void JSONReader::ProcessStatRequest(const json::Array& stat_requests) {
     stat_response_.reserve(stat_requests.size());
 
     for (const auto& request : stat_requests) {
-        const json::Dict& map_stat_request = request.AsMap();
+        const json::Dict& map_stat_request = request.AsDict();
         std::optional<domain::BusInfo> bus_info;
         const std::unordered_set<const Bus*>* buses_by_stop;
         std::string title;
@@ -181,9 +181,9 @@ void JSONReader::ProcessRenderSettingRequest(const json::Dict& setting_requests)
 
 void JSONReader::ProcessRequest(std::istream& input) {
     queries_ = json::Load(input);
-    const json::Dict& requests = queries_.GetRoot().AsMap();
+    const json::Dict& requests = queries_.GetRoot().AsDict();
     ProcessBaseRequest(requests.at("base_requests"s).AsArray());
-    ProcessRenderSettingRequest(requests.at("render_settings"s).AsMap());
+    ProcessRenderSettingRequest(requests.at("render_settings"s).AsDict());
     ProcessStatRequest(requests.at("stat_requests"s).AsArray());
 }
     
@@ -197,8 +197,3 @@ const map_renderer::RenderSettings* JSONReader::GetRenderSettings() const {
     
 } // namespace json
 } // namespace transport_catalogue
-
-/*
- * Здесь можно разместить код наполнения транспортного справочника данными из JSON,
- * а также код обработки запросов к базе и формирование массива ответов в формате JSON
- */
