@@ -1,46 +1,60 @@
 #pragma once
 
+#include "geo.h"
 #include "domain.h"
-#include <vector>
+
 #include <string>
-#include <map>
-#include <deque>
+#include <string_view>
 #include <unordered_set>
 #include <unordered_map>
-#include <set>
+#include <map>
+#include <deque>
+#include <optional>
+#include <vector>
 
-namespace transport_catalogue {
-using namespace domain;
+namespace tr_cat {
+
+namespace detail {
     
-class TransportCatalogue {
-public:
-    void AddBus(Bus bus);
-    void AddStop(Stop stop);
-    void AddStopDistances(StopDistances stop_distances);
-    const Bus* SearchBus(const std::string& title) const;
-    const Stop* SearchStop(const std::string& title) const;
-    int GetStopsDistance(const Stop* from, const Stop* to) const;
-    const std::unordered_set<const Bus*>* GetStopBuses(const Stop* stop) const;
-    const std::map<std::string_view, Bus*>& GetTitleToBus() const {
-        return title_to_bus_;
-    }
+struct PairPtrHasher {
+	size_t operator()(const std::pair<Stop*, Stop*> p) const;
 private:
-    std::deque<Stop> stops_;
-    std::map<std::string_view, Stop*> title_to_stop_;
-    std::deque<Bus> buses_;
-    std::map<std::string_view, Bus*> title_to_bus_;
-    std::unordered_map<const Stop*, std::unordered_set<const Bus*>> stop_to_buses_;
-
-    class Hasher {
-    private:
-        // хэшируем указатель произвольного типа, хотя можно указать и конкретный. В данном случае Stop*
-        std::hash<const void*> hasher_;
-    public:
-        size_t operator()(const std::pair<const Stop*, const Stop*>& stop_pointers) const {
-            return static_cast<size_t>(hasher_(stop_pointers.first) + hasher_(stop_pointers.second) * 37 * 37);
-        }
-    };
-    std::unordered_map<std::pair<const Stop*, const Stop*>, int, Hasher> distances_between_stops_;
+	std::hash<const void*> hasher_;
 };
     
-} // namespace transport_catalogue
+} // namespace detail
+
+class TransportCatalogue {
+public:
+	void AddStop(const Stop&& stop);
+
+	void AddBus(const Bus&& bus);
+
+	std::optional<Bus*> FindBus(const std::string_view name) const;
+
+	std::optional<Stop*> FindStop(const std::string_view name) const;
+
+	const std::unordered_set<Bus*> GetBusesForStop(Stop* stop) const;
+
+	void AddDistances(std::pair<std::pair<Stop*, Stop*>, int>&& p);
+
+	int GetDistanceBtwStops(Stop* stop1, Stop* stop2) const;
+
+	const std::unordered_map<std::string_view, Bus*> GetAllBuses() const;
+
+	const std::unordered_map<Stop*, std::unordered_set<Bus*>> GetStopsWithBuses() const;
+
+	const std::unordered_map<std::string_view, Stop*>& GetStopsIndex() const;
+
+	int CountStops() const;
+
+private:
+	std::deque<Stop> stops_;
+	std::deque<Bus> buses_;
+	std::unordered_map<std::string_view, Bus*> buses_index_;
+	std::unordered_map<std::string_view, Stop*> stops_index_;
+	std::unordered_map<Stop*, std::unordered_set<Bus*>> stops_with_buses_;
+	std::unordered_map<std::pair<Stop*, Stop*>, int, detail::PairPtrHasher> distances_;
+};
+
+} //namespace tr_cat

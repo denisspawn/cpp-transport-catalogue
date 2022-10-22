@@ -1,50 +1,55 @@
 #pragma once
 
+#include "json.h"
+#include "json_builder.h"
 #include "transport_catalogue.h"
 #include "request_handler.h"
-#include "json.h"
 #include "map_renderer.h"
+#include "transport_router.h"
+#include "domain.h"
 
-#include <algorithm>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <iomanip>
-#include <utility>
+#include <functional>
+#include <algorithm>
 
-namespace transport_catalogue {
-namespace json_reader {
-        
+
 class JSONReader {
 public:
-    JSONReader(TransportCatalogue& tr_cat, request_handler::RequestHandler& req_nadler)
-        : tr_cat_(tr_cat)
-        , req_hand_(req_nadler) {}
+    JSONReader(tr_cat::TransportCatalogue& transport_catalogue);
 
-    void ProcessRequest(std::istream& input);
-    const json::Array& GetStatRespose() const;
-    const map_renderer::RenderSettings* GetRenderSettings() const;
-    
+    json::Document ProcessJSON(std::istream& input);
+
 private:
-    Stop MakeStop(const json::Dict& stop_query);
-    StopDistances MakeStopDistance(const json::Dict& stop_query);
-    Bus MakeBus(const json::Dict& bus_query);
-    void ProcessBaseRequest(const json::Array& base_requests);
-    void ProcessStatRequest(const json::Array& base_requests);
-    void ProcessRenderSettingRequest(const json::Dict& stat_requests);
-    svg::Color CooseColorFormat(const json::Node color) const;
+    tr_cat::TransportCatalogue& transport_catalogue_;
+    RequestHandler rh_;
+    json::Document* doc_ = nullptr;
+    std::unordered_map<Stop*, std::map<std::string, int>> distances_to_process_;
+    RenderSettings settings_;
+    RouterSettings r_set_;
 
-    TransportCatalogue& tr_cat_;
-    request_handler::RequestHandler& req_hand_;
-    
-    json::Document queries_;
-    // JSON format respons for "stat_requests"
-    json::Array stat_response_;
-    // JSON processed "render_settings"
-    map_renderer::RenderSettings r_set_;
+    void CreateAndAddStops();
+    void AddDistances();
+    void CreateAndAddBuses();
+    void ReadSettings();
+    void ReadRouterSettings();
+    json::Document StatRequestsHandler();
+
+    std::map<std::string, int> ParseDistances(const json::Dict& distances);
+    void ProcessRoute(Bus& bus, json::Node& node);
+    svg::Color ParseColor(const json::Node& node);
+    json::Array BusNames(json::Dict& request_map);
+    std::pair<json::Array, double> RouteItems(std::vector<Item> items);
+
+    bool CheckReqFormat(std::string& req_type);
+    bool CheckSettingsReqFormat(std::string& settings_type);
+
+    json::Dict ErrorResult(int id);
 };
-        
-} // namespace json
-} // namespace transport_catalogue
+
+class ReadJSONError : public std::runtime_error {
+public:
+    using runtime_error::runtime_error;
+};

@@ -1,138 +1,55 @@
 #include "request_handler.h"
 
-namespace transport_catalogue {
-namespace request_handler {
-    
-using namespace std::literals;
-    
-size_t RequestHandler::CountUniqueStops(const std::vector<const Stop*>& stops) const {
-    std::unordered_set<std::string> unique_names;
-    for (const Stop* stop : stops) {
-        unique_names.insert(stop->title);
-    }
-    return unique_names.size();
-}
-    
-double RequestHandler::GetRouteCircleLength(const Bus* bus) const {
-    double route_length = 0.0;
-    if (!bus->stops.size())
-        return route_length;
-    for (auto from = bus->stops.begin(); ; ++from) {
-        auto to = std::next(from);
-        if (to == bus->stops.end())
-            break;
-        const Stop* stop_from = *(from);
-        const Stop* stop_to = *(to);
-
-        int distance = db_.GetStopsDistance(stop_from, stop_to);
-        if (distance == 0) distance = db_.GetStopsDistance(stop_to, stop_from);
-
-        if (distance > 0) {
-            route_length += distance;
-        } else {
-            route_length += ComputeDistance(stop_from->coords, stop_to->coords);
-        }
-    }
-    return route_length;
-}
-    
-double RequestHandler::GetRouteDirectLength(const Bus* bus) const {
-    double route_length = 0.0;
-    if (!bus->stops.size())
-        return route_length;
-    for (auto from = bus->stops.begin(); ; ++from) {
-        auto to = std::next(from);
-        if (to == bus->stops.end())
-            break;
-        const Stop* stop_from = *(from);
-        const Stop* stop_to = *(to);
-
-        int distances_from_to = db_.GetStopsDistance(stop_from, stop_to);
-        int distances_to_from = db_.GetStopsDistance(stop_to, stop_from);
-
-        if (distances_from_to > 0) {
-            route_length += distances_from_to;
-            if (distances_to_from > 0) {
-                route_length += distances_to_from;
-            } else {
-                route_length += distances_from_to;
-            }
-        } else if (distances_to_from > 0) {
-            route_length += (distances_to_from * 2);
-        } else {
-            route_length += (ComputeDistance(stop_from->coords, stop_to->coords) * 2);
-        }
-    }
-
-    return route_length;
-}
-    
-double RequestHandler::GetRouteGeoLength(const Bus* bus) const {
-    double route_geo_length = 0.0;
-    if (!bus->stops.size())
-        return route_geo_length;
-
-    for (auto from = bus->stops.begin(); ; ++from) {
-        auto to = std::next(from);
-        if (to == bus->stops.end())
-            break;
-        const Stop* stop_from = *(from);
-        const Stop* stop_to = *(to);
-        route_geo_length += ComputeDistance(stop_from->coords, stop_to->coords);
-    }
-    if (!bus->is_circular)
-        route_geo_length *= 2;
-
-    return route_geo_length;
-}
-    
-std::optional<BusInfo> RequestHandler::GetBusStat(const std::string& bus_name) const {
-    BusInfo bus_info;
-
-    const Bus* bus_p;
-    bus_p = db_.SearchBus(bus_name);
-
-    if (bus_p != nullptr) {
-        if (bus_p->is_circular) {
-            bus_info.stops_on_route = bus_p->stops.size();
-            bus_info.unique_stops = CountUniqueStops(bus_p->stops);
-            bus_info.route_length = GetRouteCircleLength(bus_p);
-            bus_info.curvature = bus_info.route_length / GetRouteGeoLength(bus_p);
-            return bus_info;
-        }
-        if (!bus_p->is_circular) {
-            bus_info.stops_on_route = (bus_p->stops.size() * 2) - 1;
-            bus_info.unique_stops = CountUniqueStops(bus_p->stops);
-            bus_info.route_length = GetRouteDirectLength(bus_p);
-            bus_info.curvature = bus_info.route_length / GetRouteGeoLength(bus_p);
-            return bus_info;
-        }
-    }
-
-    return std::nullopt;
-}
-    
-const std::unordered_set<const Bus*>* RequestHandler::GetBusesByStop(const std::string& stop_name) const {
-    const Stop* stop_p;
-    stop_p = db_.SearchStop(stop_name);
-    
-    if (stop_p == nullptr)
-        return nullptr;
-
-    return db_.GetStopBuses(stop_p);
-}
-    
-const std::map<std::string_view, Bus*>& RequestHandler::GetTitleToBus() const {
-    return db_.GetTitleToBus();
-}
-    
-const svg::Document& RequestHandler::RenderMap() const {
-    return renderer_.GetRenderDocument();
-}
-    
-const map_renderer::MapRenderer& RequestHandler::GetMapRenderer() const {
-    return renderer_;
+RequestHandler::RequestHandler(const tr_cat::TransportCatalogue& db)
+	:db_(db) {
 }
 
-} // namespace handler
-} // namespace transport_catalogue
+std::optional<BusStat> RequestHandler::GetBusStat(const std::string_view& bus_name) const {
+	std::optional<Bus*> ref = db_.FindBus(bus_name);
+	if (ref) {
+		BusStat result;
+		double geo_l = 0.0;
+		std::vector<Stop*> route = ref.value()->route;
+		result.stop_count = route.size();
+		for (size_t i = 0; i + 1 < route.size(); ++i) {
+			geo::Coordinates from, to;
+			from = route[i]->place;
+			to = route[i + 1]->place;
+			geo_l += ComputeDistance(from, to);
+			result.route_length += db_.GetDistanceBtwStops(route[i], route[i + 1]);
+		}
+		result.curvature = result.route_length / geo_l;
+		result.unique_stop_count = ref.value()->unique_stops.size();
+		return result;
+	}
+	else {
+		return std::nullopt;
+	}
+}
+
+const std::unordered_set<Bus*> RequestHandler::GetBusesByStop(const std::string_view& stop_name) const {
+	std::optional<Stop*> ref = db_.FindStop(stop_name);
+	return db_.GetBusesForStop(ref.value());
+}
+
+const std::map<std::string_view, Bus*> RequestHandler::GetAllBusesWithRoutesAndSorted() const {
+	std::unordered_map<std::string_view, Bus*> unsorted = db_.GetAllBuses();
+	std::map<std::string_view, Bus*> sorted_not_empty;
+	for (const auto& [name, bus_ptr] : unsorted) {
+		if (!bus_ptr->route.empty()) {
+			sorted_not_empty.insert({ name, bus_ptr });
+		}
+	}
+	return sorted_not_empty;
+}
+
+const std::map<std::string_view, Stop*> RequestHandler::GetAllStopsWithBusesAndSorted() const {
+	const std::unordered_map<Stop*, std::unordered_set<Bus*>> unsorted = db_.GetStopsWithBuses(); 
+	std::map<std::string_view, Stop*> sorted_not_empty;
+	for (const auto& [stop_ptr, bus_list] : unsorted) {
+		if (!bus_list.empty()) {
+			sorted_not_empty.insert({ stop_ptr->name, stop_ptr });
+		}
+	}
+	return sorted_not_empty;
+}

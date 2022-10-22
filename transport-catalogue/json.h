@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <iterator>
 #include <variant>
 #include <vector>
 
@@ -12,7 +13,6 @@ class Node;
 using Dict = std::map<std::string, Node>;
 using Array = std::vector<Node>;
 
-// Эта ошибка должна выбрасываться при ошибках парсинга JSON
 class ParsingError : public std::runtime_error {
 public:
     using runtime_error::runtime_error;
@@ -26,46 +26,53 @@ public:
 
     bool IsInt() const;
     int AsInt() const;
-        
+
     bool IsPureDouble() const;
     bool IsDouble() const;
     double AsDouble() const;
-        
+
     bool IsBool() const;
     bool AsBool() const;
-        
+
     bool IsNull() const;
-        
+
     bool IsArray() const;
     const Array& AsArray() const;
-        
+
     bool IsString() const;
     const std::string& AsString() const;
-        
+
     bool IsDict() const;
     const Dict& AsDict() const;
-        
+
     bool operator==(const Node& rhs) const;
-    bool operator!=(const Node& rhs) const;
-        
+
     const Value& GetValue() const;
-    // нужно, чтобы модифицировать Node в методах json::Builder
+
     Value& GetValue();
 };
 
+inline bool operator!=(const Node& lhs, const Node& rhs) {
+    return !(lhs == rhs);
+}
+
 class Document {
 public:
-    Document() = default;
     explicit Document(Node root);
 
     const Node& GetRoot() const;
-    
-    bool operator==(const Document& rhs) const;
-    bool operator!=(const Document& rhs) const; 
 
 private:
     Node root_;
 };
+
+inline bool operator==(const Document& lhs, const Document& rhs) {
+    return lhs.GetRoot() == rhs.GetRoot();
+}
+
+inline bool operator!=(const Document& lhs, const Document& rhs) {
+    return !(lhs == rhs);
+}
 
 Document Load(std::istream& input);
 

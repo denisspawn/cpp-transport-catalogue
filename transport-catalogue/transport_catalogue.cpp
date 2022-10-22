@@ -1,60 +1,82 @@
 #include "transport_catalogue.h"
 
-namespace transport_catalogue {
-using namespace std::literals;
-
-void TransportCatalogue::AddStop(Stop stop) {
-    Stop* added_stop = &(stops_.emplace_back(stop));
-    title_to_stop_.insert({added_stop->title, added_stop});
-
-    stop_to_buses_[added_stop];
-}
-
-const Stop* TransportCatalogue::SearchStop(const std::string& title) const {
-    auto it = title_to_stop_.find(title);
-    if (it == title_to_stop_.end())
-        return nullptr;
-    return it->second;
-}
-
-void TransportCatalogue::AddBus(Bus bus) {
-    Bus* added_bus = &(buses_.emplace_back(bus));
-    title_to_bus_.insert({added_bus->title, added_bus});
-
-    for (const Stop* stop : added_bus->stops) {
-        stop_to_buses_[stop].insert(added_bus);
-    }
-}
-
-const Bus* TransportCatalogue::SearchBus(const std::string& title) const {
-    auto it = title_to_bus_.find(title);
-    if (it == title_to_bus_.end())
-        return nullptr;
-    return it->second;
-}
-
-int TransportCatalogue::GetStopsDistance(const Stop* from, const Stop* to) const {
-    auto distance_it = distances_between_stops_.find({from, to});
-    if (distance_it != distances_between_stops_.end())
-        return distance_it->second;
-    return 0;
+namespace tr_cat {
+    
+namespace detail {
+    
+size_t PairPtrHasher::operator()(const std::pair<Stop*, Stop*> p) const {
+	size_t h1 = hasher_(p.first);
+	size_t h2 = hasher_(p.second);
+	return h1 + 37 * h2;
 }
     
-const std::unordered_set<const Bus*>* TransportCatalogue::GetStopBuses(const Stop* stop) const {
-    auto it = stop_to_buses_.find(stop);
-    if (it != stop_to_buses_.end()) {
-        return &(it->second);
-    }
-    return nullptr;
+} // namespace detail
+
+void TransportCatalogue::AddStop(const Stop&& stop) {
+	stops_.emplace_back(stop);
+	stops_index_[stops_.back().name] = &stops_.back();
+	stops_with_buses_[&stops_.back()];
 }
 
-
-void TransportCatalogue::AddStopDistances(StopDistances stop_distances) {
-    const Stop* stop_from = SearchStop(stop_distances.title);
-    for (auto& [to_stop_title, distance] : stop_distances.stop_to_distance) {
-        const Stop* stop_to = SearchStop(to_stop_title);
-        distances_between_stops_.insert({{stop_from, stop_to}, distance});
-    }
+void TransportCatalogue::AddBus(const Bus&& bus) {
+	buses_.emplace_back(bus);
+	buses_index_[buses_.back().name] = &buses_.back();
+	for (const auto stop : bus.unique_stops) {
+		stops_with_buses_[stop].insert(&buses_.back());
+	}
 }
-    
-} // namespace transport_catalogue
+
+std::optional<Bus*> TransportCatalogue::FindBus(const std::string_view name) const {
+	if (!buses_index_.count(name)) {
+		return std::nullopt;
+	}
+	else {
+		return buses_index_.at(name);
+	}
+}
+
+std::optional<Stop*> TransportCatalogue::FindStop(const std::string_view name) const {
+	if (!stops_index_.count(name)) {
+		return std::nullopt;
+	}
+	else {
+		return stops_index_.at(name);
+	}
+}
+
+const std::unordered_set<Bus*> TransportCatalogue::GetBusesForStop(Stop* stop) const {
+	return stops_with_buses_.at(stop);
+}
+
+void TransportCatalogue::AddDistances(std::pair<std::pair<Stop*, Stop*>, int>&& p) {
+	distances_[p.first] = p.second;
+}
+
+int TransportCatalogue::GetDistanceBtwStops(Stop* stop1, Stop* stop2) const {
+	std::pair<Stop*, Stop*> p = std::make_pair(stop1, stop2);
+	if (distances_.count(p)) {
+		return distances_.at(p);
+	}
+	else {
+		p = std::make_pair(stop2, stop1);
+		return distances_.at(p);
+	}
+}
+
+const std::unordered_map<std::string_view, Bus*> TransportCatalogue::GetAllBuses() const {
+	return buses_index_;
+}
+
+const std::unordered_map<Stop*, std::unordered_set<Bus*>> TransportCatalogue::GetStopsWithBuses() const {
+	return stops_with_buses_;
+}
+
+const std::unordered_map<std::string_view, Stop*>& TransportCatalogue::GetStopsIndex() const {
+	return stops_index_;
+}
+
+int TransportCatalogue::CountStops() const {
+	return stops_.size();
+}
+
+} // namespace tr_cat

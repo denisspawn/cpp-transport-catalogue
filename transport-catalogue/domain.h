@@ -2,34 +2,27 @@
 
 #include "geo.h"
 #include <string>
-#include <string_view>
-#include <unordered_map>
 #include <vector>
-#include <set>
+#include <unordered_set>
 
-namespace domain {
-    
+
 struct Stop {
-    std::string title;
-    geo::Coordinates coords;
-};
-
-struct StopDistances {
-    std::string title;
-    std::unordered_map<std::string, int> stop_to_distance;
+	std::string name;
+	geo::Coordinates place{ 0.0, 0.0 };
 };
 
 struct Bus {
-    std::string title;
-    bool is_circular;
-    std::vector<const Stop*> stops;
+	std::string name;
+	std::vector<Stop*> route;
+	std::unordered_set<Stop*> unique_stops;
+	bool is_round = false;
+	std::vector<Stop*> half_route; // will by empty if is_round == true
 };
 
-struct BusInfo {
-    size_t stops_on_route = 0;
-    size_t unique_stops = 0;
-    double route_length = 0.0;
-    double curvature = 0.0;
+
+struct BusStat {
+	double curvature = 0.0;
+	int route_length = 0;
+	int stop_count = 0;
+	int unique_stop_count = 0;
 };
-    
-} //namespace domain
