@@ -1,0 +1,5 @@
+# Hashes of file build rules.
+a17857b148c443b56d215542a42e4831 graph.pb.h
+a8a708609141ebbccf27351e581e6924 map_renderer.pb.h
+0168694ed413573a2295a01a8f6770c1 transport_catalogue.pb.h
+80af899fe0f53ea04ad69bbf2cc3b6cd transport_router.pb.h
