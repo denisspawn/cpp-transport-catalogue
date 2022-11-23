@@ -3,9 +3,9 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <iterator>
 #include <variant>
 #include <vector>
+#include <iterator>
 
 namespace json {
 
@@ -78,4 +78,4 @@ Document Load(std::istream& input);
 
 void Print(const Document& doc, std::ostream& output);
 
-}  // namespace json
+}  //namespace json

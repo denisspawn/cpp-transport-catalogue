@@ -1,107 +1,115 @@
 #include "json_builder.h"
 
-namespace json {
-    
-Context::Context(Builder& builder)
-    : builder_(builder) {}
+using namespace std::string_literals;
 
-KeyContext Context::Key(const std::string& key) {
-    return builder_.Key(key);
+namespace json {
+
+Context::Context(Builder& builder)
+    :builder_(builder) {
 }
-    
-Context Context::Value(Node::Value value) {
+KeyContext& Context::Key(const std::string& key) {
+    return builder_.Key(key);
+
+}
+Context& Context::Value(Node::Value value) {
     return builder_.Value(value);
 }
-    
-StartDictContext Context::StartDict() {
+StartDictContext& Context::StartDict() {
     return builder_.StartDict();
 }
-    
-StartArrayContext Context::StartArray() {
+StartArrayContext& Context::StartArray() {
     return builder_.StartArray();
+
 }
-    
-Context Context::EndDict() {
+Context& Context::EndDict() {
     return builder_.EndDict();
-}
     
-Context Context::EndArray() {
+}
+Context& Context::EndArray() {
     return builder_.EndArray();
 }
-    
 Node Context::Build() {
     return builder_.Build();
 }
-    
-KeyContext::KeyContext(Builder& builder)
-    : Context(builder) {}
-    
-ValueContext KeyContext::Value(Node::Value value) {
-    builder_.Value(value);
-    return ValueContext(builder_);
-}
-    
+
 ValueContext::ValueContext(Builder& builder)
-    : Context(builder) {}
-    
+    :Context(builder) {
+}
+
 StartDictContext::StartDictContext(Builder& builder)
-    : Context(builder) {}
-    
+    :Context(builder) {
+}
+
 ValueArrayContext::ValueArrayContext(Builder& builder)
     :Context(builder) {
 }
 
-ValueArrayContext ValueArrayContext::Value(Node::Value value) {
+ValueArrayContext& ValueArrayContext::Value(Node::Value value) {
     builder_.Value(value);
-    return ValueArrayContext(builder_);
+    return *this;
 }
-    
+
 StartArrayContext::StartArrayContext(Builder& builder)
-    : Context(builder) {}
-    
-ValueArrayContext StartArrayContext::Value(Node::Value value) {
-    builder_.Value(value);
-    return ValueArrayContext(builder_);
+    :Context(builder) {
 }
-    
+
+ValueArrayContext& StartArrayContext::Value(Node::Value value) {
+    builder_.Value(value);
+    ValueArrayContext* v = new ValueArrayContext(builder_);
+    return *v;
+}
+
+KeyContext::KeyContext(Builder& builder)
+    :Context(builder)
+{
+}
+
+ValueContext& KeyContext::Value(Node::Value value) {
+    builder_.Value(value);
+    ValueContext* v = new ValueContext(builder_);
+    return *v;
+}
+
 Node Builder::CreateNode(Node::Value value) {
-    Node node;
+  
+    std::unique_ptr<Node> n;
     if (std::holds_alternative<Array>(value)) {
         Array arr = std::get<Array>(value);
-        node = Node(std::move(arr));
+
+        n = std::make_unique<Node>(std::move(arr));
     }
     else if (std::holds_alternative<Dict>(value)) {
-        Dict dict = std::get<Dict>(value);
-        node = Node(std::move(dict));
+        Dict di = std::get<Dict>(value);
+        n = std::make_unique<Node>(std::move(di));
     }
     else if (std::holds_alternative<bool>(value)) {
         bool b = std::get<bool>(value);
-        node = Node(b);
+        n = std::make_unique<Node>(b);
     }
     else if (std::holds_alternative<int>(value)) {
         int i = std::get<int>(value);
-        node = Node(i);
+        n = std::make_unique<Node>(i);
     }
     else if (std::holds_alternative<std::string>(value)) {
         std::string s = std::get<std::string>(value);
-        node = Node(std::move(s));
+        n = std::make_unique<Node>(std::move(s));
     }
     else if (std::holds_alternative<double>(value)) {
         double d = std::get<double>(value);
-        node = Node(d);
+        n = std::make_unique<Node>(d);
     }
     else {
-        node = Node();
+        n = std::make_unique<Node>();
     }
-    return node;
+    return *n;
 }
 
-void Builder::AddNode(Node node) {
+void Builder::AddNode(Node n) {
     if (nodes_stack_.empty()) {
         if (!root_.IsNull()) {
             throw std::logic_error("Root already exists");
         }
-        root_ = node;
+        root_ = n;
         return;
     }
     if (!nodes_stack_.back()->IsString() && !nodes_stack_.back()->IsArray()) {
@@ -110,82 +118,78 @@ void Builder::AddNode(Node node) {
     if (nodes_stack_.back()->IsString()) {
         std::string s = nodes_stack_.back()->AsString();
         nodes_stack_.pop_back();
-        std::get<Dict>(nodes_stack_.back()->GetValue()).emplace(std::move(s), node);
+        std::get<Dict>(nodes_stack_.back()->GetValue()).emplace(std::move(s), n);
         return;
     }
     if (nodes_stack_.back()->IsArray()) {
-        std::get<Array>(nodes_stack_.back()->GetValue()).emplace_back(node);
+        std::get<Array>(nodes_stack_.back()->GetValue()).emplace_back(n);
         return;
     }
 }
-    
-KeyContext Builder::Key(const std::string& key) {
+
+KeyContext& Builder::Key(const std::string& key) {
     if (nodes_stack_.empty()) {
         throw std::logic_error("Attempt to create a Key outside a Dict");
     }
   
-    std::unique_ptr<Node> key_ptr = std::make_unique<Node>(key);
+    std::unique_ptr<Node> n = std::make_unique<Node>(key);
     if (nodes_stack_.back()->IsDict()) {
-        nodes_stack_.emplace_back(std::move(key_ptr));
+        nodes_stack_.emplace_back(std::move(n));
 
     }
-    return KeyContext(*this);
+    KeyContext* c = new KeyContext(*this);
+    return *c;
+}
+Context& Builder::Value(Node::Value value) {
+    Node n = CreateNode(value);
+    AddNode(n);
+
+    Context* c = new Context(*this);
+    return *c;
 }
 
-Context Builder::Value(Node::Value value) {
-    Node node = CreateNode(value);
-    AddNode(node);
-    return Context(*this);
+StartDictContext& Builder::StartDict() {
+
+    std::unique_ptr<Node> n = std::make_unique<Node>(Dict());
+    nodes_stack_.emplace_back(std::move(n));
+    StartDictContext* c = new StartDictContext(*this);
+    return *c;
 }
-    
-StartDictContext Builder::StartDict() {
-    std::unique_ptr<Node> dict_ptr = std::make_unique<Node>(Dict());
-    nodes_stack_.emplace_back(std::move(dict_ptr));
-    return StartDictContext(*this);
+
+StartArrayContext& Builder::StartArray() {
+  
+    std::unique_ptr<Node> n = std::make_unique<Node>(Array());
+    nodes_stack_.emplace_back(std::move(n));
+    StartArrayContext* c = new StartArrayContext(*this);
+    return *c;
 }
-    
-StartArrayContext Builder::StartArray() {
-    std::unique_ptr<Node> arr_ptr = std::make_unique<Node>(Array());
-    nodes_stack_.emplace_back(std::move(arr_ptr));
-    return StartArrayContext(*this);
-}
-    
-Context Builder::EndDict() {
-    if (nodes_stack_.empty()) {
-        throw std::logic_error("Attempt to close as Dict without opening");
-    }
-        
-    Node node = *nodes_stack_.back();
-    if (node.IsDict() == false) {
-        throw std::logic_error("Attempt to close as Dict node object that isn't dict");
-    }
+
+Context& Builder::EndDict() {
+    Node n = *nodes_stack_.back();
     nodes_stack_.pop_back();
-    AddNode(node);
-    return Context(*this);
+    AddNode(n);
+    Context* c = new Context(*this);
+    return *c;
 }
 
-Context Builder::EndArray() {
-    if (nodes_stack_.empty()) {
-        throw std::logic_error("Attempt to close as Array without opening");
-    }
-    
-    Node node = *nodes_stack_.back();
-    if (node.IsArray() == false) {
-        throw std::logic_error("Attempt to close as Array node object that isn't array");
-    }
+Context& Builder::EndArray() {
+    Node n = *nodes_stack_.back();
     nodes_stack_.pop_back();
-    AddNode(node);
-    return Context(*this);
+    AddNode(n);
+    Context* c = new Context(*this);
+    return *c;
 }
 
 Node Builder::Build() {
     if (root_.IsNull()) {
         throw std::logic_error("Attempt to build an empty json");
+
     }
     if (!nodes_stack_.empty()) {
         throw std::logic_error("Attempt to build an incomplete json");
+
     }
     return root_;
 }
-    
-} // namespace json
+
+} //namespace json

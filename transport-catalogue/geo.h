@@ -4,14 +4,13 @@
 
 namespace geo {
 
-const double EPSILON = 1e-6;
 const int EARTH_RADIUS = 6371000;
 
 struct Coordinates {
-    double lat;
-    double lng;
+    double lat; // Широта
+    double lng; // Долгота
     bool operator==(const Coordinates& other) const {
-        return std::abs(lat - other.lat) < EPSILON && std::abs(lng - other.lng) < EPSILON;
+        return lat == other.lat && lng == other.lng;
     }
     bool operator!=(const Coordinates& other) const {
         return !(*this == other);
@@ -19,5 +18,5 @@ struct Coordinates {
 };
 
 double ComputeDistance(Coordinates from, Coordinates to);
-    
-} // namespace geo
+
+}  // namespace geo

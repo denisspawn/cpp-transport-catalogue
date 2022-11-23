@@ -6,6 +6,7 @@ bool IsZero(double value) {
     return std::abs(value) < EPSILON;
 }
 
+// Проецирует широту и долготу в координаты внутри SVG-изображения
 svg::Point SphereProjector::operator()(geo::Coordinates coords) const {
     return {
         (coords.lng - min_lon_) * zoom_coeff_ + padding_,
@@ -53,18 +54,21 @@ void MapRenderer::AddBusNames() {
             .SetFontFamily("Verdana"s)
             .SetFontWeight("bold"s)
             .SetData(std::string(name));
+        //подложка
         image_.Add(svg::Text{ base_text }
             .SetFillColor(settings_.underlayer_color)
             .SetStrokeColor(settings_.underlayer_color)
             .SetStrokeWidth(settings_.underlayer_width)
             .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
             .SetStrokeLineCap(svg::StrokeLineCap::ROUND));
+        //надпись
         int c_pal_index = bus_index % settings_.color_palette.size();
         image_.Add(svg::Text{ base_text }
         .SetFillColor(settings_.color_palette[c_pal_index]));
         if (!bus_ptr->is_round) {
             int end_route_index = bus_ptr->route.size() / 2;
             if (bus_ptr->route[end_route_index]->name == bus_ptr->route[0]->name) {
+                //отрисовывать дважды одно название в одном и том же месте не нужно, даже если маршрут некольцевой
                 ++bus_index;
                 continue;
             }
@@ -76,12 +80,14 @@ void MapRenderer::AddBusNames() {
                 .SetFontFamily("Verdana"s)
                 .SetFontWeight("bold"s)
                 .SetData(std::string(name));
+            //подложка
             image_.Add(svg::Text{ base_text }
                 .SetFillColor(settings_.underlayer_color)
                 .SetStrokeColor(settings_.underlayer_color)
                 .SetStrokeWidth(settings_.underlayer_width)
                 .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
                 .SetStrokeLineCap(svg::StrokeLineCap::ROUND));
+            //надпись
             image_.Add(svg::Text{ base_text }
             .SetFillColor(settings_.color_palette[c_pal_index]));
         }
@@ -114,12 +120,14 @@ void MapRenderer::AddStopNames() {
             .SetFontSize(settings_.stop_label_font_size)
             .SetFontFamily("Verdana"s)
             .SetData(std::string(name));
+        //подложка
         image_.Add(svg::Text{ base_text }
             .SetFillColor(settings_.underlayer_color)
             .SetStrokeColor(settings_.underlayer_color)
             .SetStrokeWidth(settings_.underlayer_width)
             .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
             .SetStrokeLineCap(svg::StrokeLineCap::ROUND));
+        //надпись
         image_.Add(svg::Text{ base_text }
         .SetFillColor("black"s));
     }
